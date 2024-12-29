@@ -12,7 +12,7 @@ Route::get('dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::post('store-message/{userId}',[UserController::class, 'storeMessage'])->name('message.store');
+Route::post('store-message/{userId}',[UserController::class, 'storeMessage'])->name('users.storeMessage');
 Route::resource('users', UserController::class)->middleware('auth');
 
 Route::middleware('auth')->group(function () {

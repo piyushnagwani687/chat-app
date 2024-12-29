@@ -243,15 +243,7 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
   }
 </style>
 
-<script>
-$(document).ready(function(){
-  $('#action_menu_btn').click(function(){
-    $('.action_menu').toggle();
-});
-})
-
-</script>
-
+@vite('resources/js/app.js')
 </head>
 <body>
 <div class="container-fluid h-50">
@@ -269,17 +261,9 @@ $(document).ready(function(){
             <span>{{$user->name}}</span>
           </div>
         </div>
-        {{-- <span id="action_menu_btn"><i class="fas fa-ellipsis-v"></i></span> --}}
-        {{-- <div class="action_menu">
-          <ul>
-            <li><i class="fas fa-user-circle"></i> View profile</li>
-            <li><i class="fas fa-users"></i> Add to close friends</li>
-            <li><i class="fas fa-plus"></i> Add to group</li>
-            <li><i class="fas fa-ban"></i> Block</li>
-          </ul>
-        </div> --}}
+
       </div>
-        <div class="card-body msg_card_body">
+        <div class="card-body msg_card_body" id="chat-body">
             @foreach ($messages as $message)
                 @if ($message->sender_id != auth()->user()->id)
                     <div class="d-flex justify-content-start mb-4">
@@ -305,12 +289,12 @@ $(document).ready(function(){
             @endforeach
         </div>
       <div class="card-footer">
-        <form method="POST" action="{{route('message.store', $user->id)}}">
+        <form>
             @csrf
             <div class="input-group">
-                <textarea name="message" class="form-control type_msg" placeholder="Type your message..."></textarea>
+                <textarea id="message-input" name="message" class="form-control type_msg" placeholder="Type your message..."></textarea>
                 <div class="input-group-append">
-                    <span class="input-group-text send_btn"><button type="submit"><i class="fas fa-location-arrow"></i></button></span>
+                    <span class="input-group-text send_btn"><button type="button" id="send-button"><i class="fas fa-location-arrow"></i></button></span>
                 </div>
             </div>
         </form>
@@ -320,5 +304,44 @@ $(document).ready(function(){
 </div>
 </div>
 
+<script>
+    $(document).ready(function () {
+        const senderId = {{ auth()->id() }};
+        const receiverId = {{ $user->id }};
+        const chatBody = $('#chat-body');
+        const messageInput = $('#message-input');
+        const sendButton = $('#send-button');
+
+        Echo.private(`chat.${senderId}`)
+        .listen('.SendMessage', (e) => { // Add a leading period for custom event names
+            console.log('Event received:', e);
+        })
+        .error((error) => {
+            console.error('Error in Echo listener:', error);
+        });
+
+        sendButton.on('click', function () {
+            const message = messageInput.val().trim();
+            if (!message) return;
+
+            $.ajax({
+                url: "{{ route('users.storeMessage', $user->id) }}",
+                type: "POST",
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                },
+                data: { message: message },
+                success: function () {
+                    messageInput.val(''); // Clear input
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error:', error);
+                },
+            });
+        });
+
+    });
+</script>
 </body>
 </html>
+

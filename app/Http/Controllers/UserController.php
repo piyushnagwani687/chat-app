@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SendMessage;
 use App\Jobs\MessageJob;
 use App\Models\Message;
 use App\Models\User;
@@ -40,7 +41,7 @@ class UserController extends Controller
     public function show($id)
     {
         $user = User::findOrFail($id);
-        $messages = Message::where(function($query) use($user){
+        $messages = Message::with(['sender', 'receiver'])->where(function($query) use($user){
 
             $query->where(function($q) use($user) {
                 $q->where('sender_id', auth()->user()->id)->where('receiver_id', $user->id);
@@ -49,6 +50,7 @@ class UserController extends Controller
                 $q1->where('sender_id', $user->id)->where('receiver_id', auth()->user()->id);
             });
         })->get();
+
         return view('users.show', compact('user', 'messages'));
     }
 
@@ -78,6 +80,7 @@ class UserController extends Controller
 
     public function storeMessage($id, Request $request)
     {
+        // dd($id);
         $user = User::findOrFail($id);
         $message = new Message();
         $message->sender_id = auth()->user()->id;
@@ -85,9 +88,10 @@ class UserController extends Controller
         $message->message = $request->message;
         $message->save();
 
-        MessageJob::dispatch($message);
+        broadcast(new SendMessage($message->toArray()))->toOthers();
+        // SendMessage::dispatch($message->toArray());
 
-        return redirect()->to(route('users.show', $id));
+        // return redirect()->to(route('users.show', $id));
 
     }
 }
