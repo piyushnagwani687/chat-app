@@ -5,28 +5,26 @@ namespace App\Events;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class SendMessage implements ShouldBroadcastNow
+class SendMessage implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public array $message)
+    public $message;
+
+    public function __construct($message)
     {
+        $this->message = $message;
     }
 
-    public function broadcastOn()
+    public function broadcastOn(): Channel
     {
-        Log::info('Broadcasting on channel: chat.' . $this->message['receiver_id']);
-        return new PrivateChannel('chat.'.$this->message['sender_id']);
-
-    }
-
-    public function broadcastAs(): string
-    {
-        return 'SendMessage';
+        $userIds = [min($this->message->sender_id, $this->message->receiver_id), max($this->message->sender_id, $this->message->receiver_id)];
+        return new PrivateChannel('chat.'. implode('.', $userIds));
     }
 }

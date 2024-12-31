@@ -7,9 +7,11 @@ use App\Jobs\MessageJob;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
+
     /**
      * Display a listing of the resource.
      */
@@ -17,22 +19,6 @@ class UserController extends Controller
     {
         $users = User::where('id', '!=', auth()->user()->id)->get();
         return view('users.index', compact('users'));
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
     }
 
     /**
@@ -54,33 +40,8 @@ class UserController extends Controller
         return view('users.show', compact('user', 'messages'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
-
     public function storeMessage($id, Request $request)
     {
-        // dd($id);
         $user = User::findOrFail($id);
         $message = new Message();
         $message->sender_id = auth()->user()->id;
@@ -88,10 +49,9 @@ class UserController extends Controller
         $message->message = $request->message;
         $message->save();
 
-        broadcast(new SendMessage($message->toArray()))->toOthers();
-        // SendMessage::dispatch($message->toArray());
+        broadcast(new SendMessage($message))->toOthers();
 
-        // return redirect()->to(route('users.show', $id));
+        return response()->json(['message' => $message]);
 
     }
 }

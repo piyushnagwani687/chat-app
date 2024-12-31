@@ -2,8 +2,9 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Log;
 
-Broadcast::channel('chat.{id}', function (User $user, $id) {
-    return true;
-    // return (int) $user->id === (int) $id;
+Broadcast::channel('chat.{senderId}.{receiverId}', function ($user) {
+    // return true;
+    return \Auth::check();
 });

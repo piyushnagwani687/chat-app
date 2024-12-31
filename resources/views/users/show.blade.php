@@ -244,6 +244,7 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
 </style>
 
 @vite('resources/js/app.js')
+
 </head>
 <body>
 <div class="container-fluid h-50">
@@ -272,14 +273,14 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
                         </div>
                         <div class="msg_cotainer">
                             {{$message->message}}
-                            <span class="msg_time">{{$message->created_at->diffForHumans()}}</span>
+                            {{-- <span class="msg_time">{{$message->created_at->diffForHumans()}}</span> --}}
                         </div>
                     </div>
                 @else
                     <div class="d-flex justify-content-end mb-4">
                         <div class="msg_cotainer_send">
                             {{$message->message}}
-                            <span class="msg_time_send">{{$message->created_at->diffForHumans()}}</span>
+                            {{-- <span class="msg_time_send">{{$message->created_at->diffForHumans()}}</span> --}}
                         </div>
                         <div class="img_cont_msg">
                             <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
@@ -305,20 +306,28 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
 </div>
 
 <script>
-    $(document).ready(function () {
+    document.addEventListener('DOMContentLoaded', function() {
         const senderId = {{ auth()->id() }};
         const receiverId = {{ $user->id }};
+
+        let chatId = [senderId, receiverId];
+        let chatIds = Math.min(...chatId) + '.' + Math.max(...chatId)
+
         const chatBody = $('#chat-body');
         const messageInput = $('#message-input');
         const sendButton = $('#send-button');
 
-        Echo.private(`chat.${senderId}`)
-        .listen('.SendMessage', (e) => { // Add a leading period for custom event names
-            console.log('Event received:', e);
+
+
+        Echo.private(`chat.${chatIds}`)
+        .listen('SendMessage', (e) => {
+            appendMessage(e.message)
+            console.log('Message received on receiver channel:', e);
         })
         .error((error) => {
-            console.error('Error in Echo listener:', error);
+            console.log('Channel error:', error);
         });
+
 
         sendButton.on('click', function () {
             const message = messageInput.val().trim();
@@ -331,14 +340,40 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 },
                 data: { message: message },
-                success: function () {
+                success: function (response) {
                     messageInput.val(''); // Clear input
+                    appendMessage(response.message)
                 },
                 error: function (xhr, status, error) {
                     console.error('Error:', error);
                 },
             });
         });
+
+        function appendMessage(message) {
+            let receiver = `<div class="d-flex justify-content-start mb-4">
+                        <div class="img_cont_msg">
+                            <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                        </div>
+                        <div class="msg_cotainer">
+                            ${message.message}
+                        </div>
+                    </div>`;
+
+            let sender = `<div class="d-flex justify-content-end mb-4">
+                <div class="msg_cotainer_send">
+                    ${message.message}
+                </div>
+                <div class="img_cont_msg">
+                    <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                </div>
+            </div>`;
+
+            $('#chat-body').append(
+                message.sender_id != parseInt(senderId) ? receiver : sender
+
+            );
+        }
 
     });
 </script>
