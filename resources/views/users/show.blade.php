@@ -244,68 +244,86 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
 </style>
 
 @vite('resources/js/app.js')
-
+<title>Chat Application</title>
 </head>
 <body>
 <div class="container-fluid h-50">
-<div class="row justify-content-center h-100">
-
-  <div class="col-md-8 col-xl-6 chat">
-    <div class="card">
-      <div class="card-header msg_head">
-        <div class="d-flex bd-highlight">
-          <div class="img_cont">
-            <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img">
-            <span class="online_icon"></span>
-          </div>
-          <div class="user_info">
-            <span>{{$user->name}}</span>
-          </div>
-        </div>
-
-      </div>
-        <div class="card-body msg_card_body" id="chat-body">
-            @foreach ($messages as $message)
-                @if ($message->sender_id != auth()->user()->id)
-                    <div class="d-flex justify-content-start mb-4">
-                        <div class="img_cont_msg">
-                            <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
-                        </div>
-                        <div class="msg_cotainer">
-                            {{$message->message}}
-                            {{-- <span class="msg_time">{{$message->created_at->diffForHumans()}}</span> --}}
-                        </div>
-                    </div>
-                @else
-                    <div class="d-flex justify-content-end mb-4">
-                        <div class="msg_cotainer_send">
-                            {{$message->message}}
-                            {{-- <span class="msg_time_send">{{$message->created_at->diffForHumans()}}</span> --}}
-                        </div>
-                        <div class="img_cont_msg">
-                            <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
-                        </div>
-                    </div>
-                @endif
-            @endforeach
-        </div>
-      <div class="card-footer">
-        <form>
-            @csrf
-            <div class="input-group">
-                <textarea id="message-input" name="message" class="form-control type_msg" placeholder="Type your message..."></textarea>
-                <div class="input-group-append">
-                    <span class="input-group-text send_btn"><button type="button" id="send-button"><i class="fas fa-location-arrow"></i></button></span>
-                </div>
+    <div class="row justify-content-center h-100">
+        <audio id="my-audio">
+            <source src="http://codeskulptor-demos.commondatastorage.googleapis.com/GalaxyInvaders/alien_shoot.wav" type="audio/mpeg"></source>
+        </audio>
+    <div class="col-md-8 col-xl-6 chat">
+        <div class="card">
+        <div class="card-header msg_head">
+            <div class="d-flex bd-highlight">
+            <div class="img_cont">
+                <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img">
+                <span class="online_icon"></span>
             </div>
-        </form>
-      </div>
+            <div class="user_info">
+                <span>{{$user->name}}</span>
+            </div>
+            </div>
+
+        </div>
+            <div class="card-body msg_card_body" id="chat-body">
+                {{-- @foreach ($messages as $message)
+                    @if ($message->sender_id != auth()->user()->id)
+                        <div class="d-flex justify-content-start mb-4">
+                            <div class="img_cont_msg">
+                                <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                            </div>
+                            <div class="msg_cotainer">
+                                {{$message->message}}
+
+                            </div>
+                        </div>
+                    @else
+                        <div class="d-flex justify-content-end mb-4">
+                            <div class="msg_cotainer_send">
+                                {{$message->message}}
+
+                            </div>
+                            <div class="img_cont_msg">
+                                <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                            </div>
+                        </div>
+                    @endif
+                @endforeach --}}
+            </div>
+        <div class="card-footer">
+            <form>
+                @csrf
+                <div class="input-group">
+                    <textarea id="message-input" name="message" class="form-control type_msg" placeholder="Type your message..."></textarea>
+                    <div class="input-group-append">
+                        <span class="input-group-text send_btn"><button type="button" id="send-button"><i class="fas fa-location-arrow"></i></button></span>
+                    </div>
+                </div>
+            </form>
+        </div>
+        </div>
     </div>
-  </div>
-</div>
+    </div>
 </div>
 
 <script>
+    var x = document.getElementById('my-audio');
+
+    function enableAutoPlay()
+    {
+        x.muted = false;
+        x.autoplay = true;
+        x.load();
+        x.play();
+    }
+
+    // document.body.addEventListener('click', function () {
+    // x.muted = false;
+    //     enableAutoPlay();
+    // });
+
+
     document.addEventListener('DOMContentLoaded', function() {
         const senderId = {{ auth()->id() }};
         const receiverId = {{ $user->id }};
@@ -317,17 +335,51 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
         const messageInput = $('#message-input');
         const sendButton = $('#send-button');
 
+        // function scrollToBottom(chatBody) {
+        //     chatBody.scrollTop(chatBody[0].scrollHeight);
+        // }
 
+
+        var offset = 10;
+        var loading = false;
+
+        let unreadCount = 0; // Initialize unread messages count
+
+        fetchMessages(senderId,receiverId);
+
+
+    // Function to update the document title with unread count
+    function updateTitle() {
+        if (unreadCount > 0) {
+            document.title = `(${unreadCount}) New Messages`;
+        } else {
+            document.title = "Chat Application"; // Default title
+        }
+    }
+
+    // Function to handle new messages
+    function onNewMessage(message) {
+        appendMessage(message); // Append the message to the chat
+        if (document.hidden) {
+            unreadCount++; // Increment unread count if the tab is not active
+        }
+        updateTitle(); // Update the browser title
+    }
+
+    // Reset unread count when the tab becomes active
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+            unreadCount = 0; // Reset unread count
+            updateTitle(); // Restore default title
+        }
+    });
 
         Echo.private(`chat.${chatIds}`)
         .listen('SendMessage', (e) => {
-            appendMessage(e.message)
+            enableAutoPlay();
+            onNewMessage(e.message);
             console.log('Message received on receiver channel:', e);
         })
-        .error((error) => {
-            console.log('Channel error:', error);
-        });
-
 
         sendButton.on('click', function () {
             const message = messageInput.val().trim();
@@ -349,6 +401,8 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
                 },
             });
         });
+
+
 
         function appendMessage(message) {
             let receiver = `<div class="d-flex justify-content-start mb-4">
@@ -374,6 +428,113 @@ background: -webkit-linear-gradient(to right, #91EAE4, #86A8E7, #7F7FD5);
 
             );
         }
+
+        function fetchMessages(senderId, receiverId) {
+            const baseUrl = "{{ route('getMessages', ['senderId' => ':senderId', 'receiverId' => ':receiverId']) }}";
+            let url = baseUrl.replace(':senderId', senderId).replace(':receiverId', receiverId);
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function (response) {
+
+                    const messagesContainer = $('#chat-body'); // Add a container for messages
+                    messagesContainer.empty(); // Clear the current messages
+                    const messages = Object.values(response.messages).reverse();
+                    console.log(messages);
+
+                    $.each(messages, function(index, message) {
+                        const isSender = message.sender_id === senderId;
+
+                        let messageHtml = isSender
+                                ? `<div class="d-flex justify-content-end mb-4">
+                                    <div class="msg_cotainer_send">
+                                        ${message.message}
+                                    </div>
+                                    <div class="img_cont_msg">
+                                        <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                                    </div>
+                                    </div>`
+
+                                : `<div class="d-flex justify-content-start mb-4">
+                                        <div class="img_cont_msg">
+                                            <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                                        </div>
+                                        <div class="msg_cotainer">
+                                            ${message.message}
+                                        </div>
+                                    </div>`;
+
+                        messagesContainer.append(messageHtml);
+                    });
+                    // console.log(response.user);
+
+                    $('#user_chat_info').html(`<span>${response.user.name}</span>`)
+
+                    if (response.user && response.user.id) {
+                        $('#user_id').val(response.user.id);
+                    }
+                    $('.chat').removeClass('d-none');
+
+                    // scrollToBottom();
+                }
+            })
+        }
+
+        chatBody.on('scroll', function () {
+            if (chatBody.scrollTop() === 0 && !loading) {
+                loading = true; // Prevent multiple requests
+                loadMoreMessages();
+            }
+        });
+
+        function loadMoreMessages()
+        {
+            const baseUrl = "{{ route('loadMessages', ['senderId' => ':senderId', 'receiverId' => ':receiverId']) }}";
+            let url = baseUrl.replace(':senderId', senderId).replace(':receiverId', receiverId);
+            $.ajax({
+                url: url,
+                type: 'GET',
+                data:{
+                    offset:offset,
+                },
+                success: function (response) {
+                    const messagesContainer = $('#chat-body'); // Add a container for messages
+                    const messages =response.messages
+
+                    $.each(messages, function(index, message) {
+                        const isSender = message.sender_id === senderId;
+
+                        let messageHtml = isSender
+                                ? `<div class="d-flex justify-content-end mb-4">
+                                    <div class="msg_cotainer_send">
+                                        ${message.message}
+                                    </div>
+                                    <div class="img_cont_msg">
+                                        <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                                    </div>
+                                    </div>`
+
+                                : `<div class="d-flex justify-content-start mb-4">
+                                        <div class="img_cont_msg">
+                                            <img src="https://therichpost.com/wp-content/uploads/2020/06/avatar2.png" class="rounded-circle user_img_msg">
+                                        </div>
+                                        <div class="msg_cotainer">
+                                            ${message.message}
+                                        </div>
+                                    </div>`;
+
+                        messagesContainer.prepend(messageHtml);
+
+                    });
+
+                    offset += response.messages.length
+                    loading = false
+
+                }
+            });
+        }
+
 
     });
 </script>
